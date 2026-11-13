@@ -5,18 +5,35 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
 <title>八字排盘解盘 · 开发版（离线单文件）</title>
+<script>
+/* 首屏先定布局，避免窄屏先闪一下桌面版。
+   data-layout=mobile/desktop 由屏宽自动判定，也可用页头「布局」下拉强制切换，
+   这样在 PC 上能复现手机视图、在手机上也能对照桌面视图。 */
+(function () {
+  var m = 'auto';
+  try { m = localStorage.getItem('bazi-devlab-layout') || 'auto'; } catch (e) {}
+  if (m !== 'desktop' && m !== 'mobile') m = 'auto';
+  document.documentElement.dataset.layoutMode = m;
+  document.documentElement.dataset.layout =
+    (m === 'auto' ? (window.innerWidth <= 860 ? 'mobile' : 'desktop') : m);
+})();
+</script>
 <style>
 :root{--bg:#0f141b;--panel:#161d27;--panel2:#1c2532;--line:#2a3543;--txt:#e6edf5;--sub:#94a3b8;
 --accent:#5b9dff;--ok:#3ecf8e;--warn:#f0a35e;--danger:#f07178;--mono:ui-monospace,Consolas,"Courier New",monospace}
 *{box-sizing:border-box}
+html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.65 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
-header{padding:14px 22px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header{padding:12px 22px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+header .hd-main{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;min-width:0}
+header .hd-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.5px}
 header .sub{color:var(--sub);font-size:12px}
-header .sp{flex:1}
-button{background:var(--accent);color:#fff;border:1px solid transparent;border-radius:6px;padding:7px 13px;cursor:pointer;font-size:13px;font-family:inherit}
+#layoutMode{width:auto;font-size:12px;padding:5px 8px;color:var(--sub);background:var(--panel2);cursor:pointer}
+button{background:var(--accent);color:#fff;border:1px solid transparent;border-radius:6px;padding:7px 13px;cursor:pointer;font-size:13px;font-family:inherit;touch-action:manipulation}
 button:hover{filter:brightness(1.12)}
 button.ghost{background:transparent;border-color:var(--line);color:var(--txt)}
 button.ghost:hover{border-color:var(--accent)}
@@ -42,6 +59,9 @@ input[type=checkbox]{width:auto;margin-right:6px;vertical-align:middle}
 .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
 .pane{display:none}.pane.on{display:block}
 table{width:100%;border-collapse:collapse;font-size:13px}
+/* 多列表格统一放进可横向滑动的容器，窄屏不会把整页撑宽 */
+.table-scroll{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.only-mobile{display:none}
 th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
 th{background:var(--panel2);color:var(--sub);font-weight:600;white-space:nowrap}
 td.k{color:var(--sub);white-space:nowrap;background:rgba(255,255,255,.015)}
@@ -70,17 +90,77 @@ border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:99;box-sha
 #toast.err{background:var(--danger);color:#2b0d10}
 .foot{color:var(--sub);font-size:11.5px;padding:0 22px 26px;text-align:center}
 .kbd{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:11.5px}
+
+/* ================= 移动端 / 窄屏适配 =================
+   由 head 脚本按 window.innerWidth<=860 自动挂 data-layout，
+   页头「布局」下拉可强制切换，便于 PC / 手机两种测试场景互相复现。 */
+html[data-layout="mobile"] header{display:block;padding:10px 12px}
+html[data-layout="mobile"] .hd-main{display:block}
+html[data-layout="mobile"] header h1{font-size:15px}
+html[data-layout="mobile"] header .sub{display:block;font-size:11px;line-height:1.5;margin-top:3px}
+html[data-layout="mobile"] .hd-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px}
+html[data-layout="mobile"] .hd-actions>*{width:100%;min-width:0}
+html[data-layout="mobile"] #layoutMode{grid-column:1 / -1;text-align:center;font-size:13px}
+html[data-layout="mobile"] .layout{display:block;padding:10px 10px 0;gap:0}
+html[data-layout="mobile"] .side{width:auto;flex:none;position:static;max-height:none;overflow:visible}
+html[data-layout="mobile"] main{width:100%;min-width:0;margin-top:10px}
+html[data-layout="mobile"] .card{padding:12px;margin-bottom:10px}
+html[data-layout="mobile"] .card h2{font-size:14px}
+/* iOS Safari 对 <16px 的输入框会自动放大页面，这里统一抬到 16px */
+html[data-layout="mobile"] input,
+html[data-layout="mobile"] select,
+html[data-layout="mobile"] textarea{font-size:16px}
+html[data-layout="mobile"] .row{gap:6px}
+html[data-layout="mobile"] .row.stack{flex-direction:column}
+html[data-layout="mobile"] .row.stack>*{width:100%;flex:none}
+html[data-layout="mobile"] .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;margin-bottom:10px}
+html[data-layout="mobile"] .tabs button{flex:0 0 auto;padding:9px 12px;font-size:13px}
+html[data-layout="mobile"] .subtabs{gap:5px}
+html[data-layout="mobile"] .subtabs button{flex:1 1 auto}
+html[data-layout="mobile"] button{min-height:38px}
+html[data-layout="mobile"] button.mini{min-height:36px}
+html[data-layout="mobile"] .table-scroll table{min-width:460px}
+/* 四柱表只有 5 列，直接压进屏宽完整显示，不必横滑 */
+html[data-layout="mobile"] .table-scroll.fit table{min-width:0}
+html[data-layout="mobile"] .table-scroll.wide table{min-width:720px}
+html[data-layout="mobile"] table{font-size:12px}
+html[data-layout="mobile"] th,html[data-layout="mobile"] td{padding:6px 5px;overflow-wrap:anywhere}
+html[data-layout="mobile"] th{white-space:normal}
+html[data-layout="mobile"] td.k{white-space:nowrap;font-size:11px;color:var(--sub)}
+html[data-layout="mobile"] .gz{font-size:14px;letter-spacing:1px}
+html[data-layout="mobile"] .quick{gap:6px}
+html[data-layout="mobile"] .qi{flex:1 1 calc(50% - 3px);min-width:0;padding:7px 9px}
+html[data-layout="mobile"] .qi b{font-size:15px;word-break:break-all}
+html[data-layout="mobile"] pre{font-size:11.5px;padding:10px;overflow-wrap:anywhere}
+html[data-layout="mobile"] textarea.code{min-height:240px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}
+html[data-layout="mobile"] .chapter{padding-left:10px}
+html[data-layout="mobile"] .chapter .body{font-size:13px}
+html[data-layout="mobile"] details>div{padding:0 9px 10px;min-width:0}
+html[data-layout="mobile"] .hint{font-size:12px}
+html[data-layout="mobile"] .only-mobile{display:block}
+html[data-layout="mobile"] #toast{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));text-align:center}
+html[data-layout="mobile"] .foot{padding:0 12px calc(20px + env(safe-area-inset-bottom))}
+html[data-layout="mobile"] header,html[data-layout="mobile"] .foot{
+  padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
 </style>
 </head>
 <body>
 <header>
-  <h1>八字排盘解盘 · 开发版</h1>
-  <span class="sub">离线单文件 · 无注册 / 登录 / 解锁 · 规则与算法可编辑、可导出</span>
-  <span class="sp"></span>
-  <button class="ghost mini" onclick="exportRules()">导出规则包 rules.json</button>
-  <button class="ghost mini" onclick="exportResult()">导出结果 JSON</button>
-  <button class="ghost mini" onclick="exportEngine()">导出引擎源码 JS</button>
-  <button class="ghost mini" onclick="document.querySelector('#importFile').click()">导入规则包</button>
+  <div class="hd-main">
+    <h1>八字排盘解盘 · 开发版</h1>
+    <span class="sub">离线单文件 · 无注册 / 登录 / 解锁 · 规则与算法可编辑、可导出</span>
+  </div>
+  <div class="hd-actions">
+    <button class="ghost mini" onclick="exportRules()">导出规则包</button>
+    <button class="ghost mini" onclick="exportResult()">导出结果 JSON</button>
+    <button class="ghost mini" onclick="exportEngine()">导出引擎源码</button>
+    <button class="ghost mini" onclick="document.querySelector('#importFile').click()">导入规则包</button>
+    <select id="layoutMode" onchange="setLayout(this.value)" aria-label="布局模式" title="布局模式：便于 PC / 手机双端测试">
+      <option value="auto">布局：自动</option>
+      <option value="desktop">布局：桌面</option>
+      <option value="mobile">布局：移动</option>
+    </select>
+  </div>
   <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importRules(this)">
 </header>
 
@@ -118,6 +198,7 @@ border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:99;box-sha
   <div class="card">
     <h2>状态</h2>
     <div class="hint" id="status" style="margin:0">就绪</div>
+    <div class="hint">页头「布局」下拉可强制桌面 / 移动视图，便于在任一端对照另一种排版。</div>
   </div>
 </aside>
 
@@ -162,13 +243,14 @@ border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:99;box-sha
   <section class="pane" id="p-sync">
     <div class="card">
       <h2>优化后如何回迁到项目</h2>
-      <table>
+      <div class="only-mobile hint" style="margin:0 0 6px">↓ 表格可左右滑动查看完整列</div>
+      <div class="table-scroll wide"><table>
         <tr><th>改动类型</th><th>回迁方式</th><th>是否需要改 Python 代码</th></tr>
         <tr><td>模板语料 / 文案（text）</td><td>导出 rules.json → 覆盖 <span class="kbd">app/rules.json</span></td><td>否，自动生效</td></tr>
         <tr><td>权重 / 阈值 / 分级（params）</td><td>同上</td><td>否，自动生效</td></tr>
         <tr><td>命理基础表（tables）</td><td>同上</td><td>否，自动生效（派生表自动重算）</td></tr>
         <tr><td>算法结构 / 判定流程</td><td>按下方同名函数对照表，回写到 Python 同名函数</td><td>是，需人工对照</td></tr>
-      </table>
+      </table></div>
       <h3>建议流程</h3>
       <pre>1) 在本文件里改规则 → 应用 → 看结果 / 中间量，反复验证
 2) 导出规则包 rules.json → 覆盖 app/rules.json
@@ -177,7 +259,7 @@ border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:99;box-sha
 4) 若改过算法结构：按对照表回写 Python，再跑一次 --live 直到 36/36 PASS
 5) 需要重新生成单文件时： python tools/build_devlab.py</pre>
       <h3>函数对照表（JS 引擎 ↔ Python 引擎）</h3>
-      <table>
+      <div class="table-scroll wide"><table>
         <tr><th>JS（tools/devlab_engine.js / 本文件内嵌）</th><th>Python</th><th>职责</th></tr>
         <tr><td>paipan</td><td>app/paipan.py :: paipan</td><td>四柱、藏干、纳音、十神、大运流年、真太阳时</td></tr>
         <tr><td>xishen_analysis / _wuxing_count</td><td>同名</td><td>五行计数、扶抑取用、强弱判定</td></tr>
@@ -187,7 +269,7 @@ border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:99;box-sha
         <tr><td>career_verdict / _career_text</td><td>同名</td><td>职业路径判定与事业财运章节</td></tr>
         <tr><td>_dayun_section / _yuanju_brief / _zhi_rels / _ju_note</td><td>同名</td><td>大运逐段深析</td></tr>
         <tr><td>_family_text / _marriage_text / _ss_counts</td><td>同名</td><td>六亲、婚姻、十神统计</td></tr>
-      </table>
+      </table></div>
       <h3>项目侧配套文件</h3>
       <pre>app/rules.py              规则加载器（原地覆盖模块常量，保持引用一致）
 app/rules.json            规则唯一来源（本页导出即覆盖它）
@@ -10749,6 +10831,26 @@ function toast(msg, err = false) {
   toastTimer = setTimeout(() => t.style.display = 'none', 3200);
 }
 function status(msg) { $('#status').textContent = msg; }
+
+/* 双端布局：auto 跟随窗口宽度，desktop / mobile 可强制切换（便于对照测试） */
+let layoutMode = document.documentElement.dataset.layoutMode || 'auto';
+function effectiveLayout() {
+  return layoutMode === 'auto'
+    ? (window.innerWidth <= 860 ? 'mobile' : 'desktop') : layoutMode;
+}
+function applyLayout() {
+  document.documentElement.dataset.layout = effectiveLayout();
+  const sel = $('#layoutMode');
+  if (sel && sel.value !== layoutMode) sel.value = layoutMode;
+}
+function setLayout(m) {
+  layoutMode = (m === 'desktop' || m === 'mobile') ? m : 'auto';
+  try { localStorage.setItem('bazi-devlab-layout', layoutMode); } catch (e) {}
+  applyLayout();
+  toast('布局：' + ({ auto: '自动（跟随窗口宽度）', desktop: '桌面', mobile: '移动' })[layoutMode]);
+}
+window.addEventListener('resize', applyLayout);
+
 function download(name, text, mime = 'application/json;charset=utf-8') {
   const blob = new Blob([text], { type: mime });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -10897,13 +10999,14 @@ function renderResult() {
     ${ts ? `<div style="margin-top:9px;color:var(--warn);font-size:12.5px">真太阳时：标准时 ${esc(ts.standard)} → ${esc(ts.corrected)}（经度差 ${ts.lon_corr_min > 0 ? '+' : ''}${ts.lon_corr_min} 分，均时差 ${ts.eq_time_min > 0 ? '+' : ''}${ts.eq_time_min} 分，合计 ${ts.offset_min > 0 ? '+' : ''}${ts.offset_min} 分）</div>` : ''}
   </div>
   <div class="card"><h2>四柱与十神</h2>
-    <table><tr><th></th>${PILLAR_KEYS.map(k => `<th>${CN[k]}</th>`).join('')}</tr>${rows}</table>
+    <div class="table-scroll fit"><table><tr><th></th>${PILLAR_KEYS.map(k => `<th>${CN[k]}</th>`).join('')}</tr>${rows}</table></div>
   </div>
   <div class="card"><h2>五行分布 / 地支关系</h2>
-    <div class="row"><div>${wx}</div><div style="flex:1.4"><h3 style="margin-top:0">合冲刑害（按强度排序）</h3>${rels}</div></div>
+    <div class="row stack"><div>${wx}</div><div><h3 style="margin-top:0">合冲刑害（按强度排序）</h3>${rels}</div></div>
   </div>
   <div class="card"><h2>大运与流年</h2>
-    <div style="overflow-x:auto"><table><tr><th>起运</th><th>年份</th><th>干支</th><th>天干十神</th><th>地支十神</th><th>五行</th><th>基调</th><th>流年干支</th></tr>${yunRows}</table></div>
+    <div class="only-mobile hint" style="margin:0 0 6px">↓ 表格可左右滑动查看完整列</div>
+    <div class="table-scroll wide"><table><tr><th>起运</th><th>年份</th><th>干支</th><th>天干十神</th><th>地支十神</th><th>五行</th><th>基调</th><th>流年干支</th></tr>${yunRows}</table></div>
     <div class="hint">当前大运：${esc(f.current_dayun ? f.current_dayun.start_age + ' 岁起 ' + f.current_dayun.ganzhi + ' 运' : '不在排定大运区间内')}　当前流年：${esc(f.current_liunian.year)} ${esc(f.current_liunian.ganzhi)}（${esc(f.current_liunian.shishen)}）</div>
   </div>`;
 }
@@ -10980,6 +11083,7 @@ function runBaseline() {
   toast('内置用例自检完成');
 }
 
+applyLayout();
 initForm();
 run();
 </script>
